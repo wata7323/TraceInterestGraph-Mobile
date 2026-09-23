@@ -1,0 +1,19 @@
+{
+  "name": "Trace Interest Graph",
+  "short_name": "Trace",
+  "description": "通信がない時も気になったことを残せる、ローカル優先の興味メモ。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2efe8",
+  "theme_color": "#f2efe8",
+  "icons": [
+    {
+      "src": "trace-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2efe8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Trace — Interest Graph Demo</title>
+  <meta name="description" content="雑なメモから、自分の興味のつながりを見つけるローカルデモ。">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="trace-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="trace-icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#capture" aria-label="Trace ホーム">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>TRACE</span>
+    </a>
+    <div class="sync-state" id="syncState" title="この端末への保存状態">
+      <span class="status-dot"></span><span>端末に保存</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="view active" id="capture" aria-labelledby="captureTitle">
+      <div class="section-heading">
+        <p class="eyebrow">CAPTURE</p>
+        <h1 id="captureTitle">まだ言葉になっていないものを、残す。</h1>
+        <p>短くて大丈夫です。整理はあとからTraceが手伝います。</p>
+      </div>
+
+      <form class="capture-form" id="memoForm">
+        <label class="sr-only" for="memoText">メモ</label>
+        <textarea id="memoText" maxlength="500" rows="5" placeholder="この広告、なんか好き。&#10;東京駅で変なのやってた。" required></textarea>
+        <div class="preview" id="photoPreview" hidden></div>
+        <div class="form-row">
+          <label class="quiet-button" for="photoInput">＋ 写真</label>
+          <input id="photoInput" type="file" accept="image/*" hidden>
+          <span class="location-choice">
+            <input id="withLocation" type="checkbox" checked>
+            <label for="withLocation">現在地も残す</label>
+          </span>
+          <span class="spacer"></span>
+          <span class="char-count" id="charCount">0 / 500</span>
+          <button class="primary-button" type="submit">残す</button>
+        </div>
+        <p class="form-message" id="formMessage" role="status"></p>
+      </form>
+
+      <aside class="capture-note">
+        <span>LOCAL FIRST</span>
+        <p>通信がなくても、先にこの端末へ保存します。位置情報が取れなくてもメモは失いません。</p>
+      </aside>
+    </section>
+
+    <section class="view" id="discover" aria-labelledby="discoverTitle">
+      <div class="section-heading compact">
+        <p class="eyebrow">DISCOVER</p>
+        <h1 id="discoverTitle">過去の自分から、発見する。</h1>
+      </div>
+      <div class="discover-grid" id="discoverGrid"></div>
+    </section>
+
+    <section class="view" id="map" aria-labelledby="mapTitle">
+      <div class="section-heading compact map-heading">
+        <div>
+          <p class="eyebrow">INTEREST MAP</p>
+          <h1 id="mapTitle">興味の輪郭。</h1>
+        </div>
+        <div class="legend" aria-label="線の凡例">
+          <span>距離＝意味の近さ</span>
+          <span><i class="solid-line"></i>確実</span>
+          <span><i class="dashed-line"></i>仮説</span>
+        </div>
+      </div>
+      <div class="map-shell">
+        <div class="map-toolbar">
+          <div><span class="layout-state idle" id="layoutState">意味配置：準備中</span><span>ドラッグ：回転　ホイール：拡大縮小</span></div>
+          <button type="button" id="resetGraph">視点を戻す</button>
+        </div>
+        <canvas id="graph" tabindex="0" role="application" aria-label="ドラッグで回転できる3D興味マップ"></canvas>
+        <div class="map-detail" id="mapDetail">3D空間を回転し、ノードを選ぶとつながりの根拠を表示します。</div>
+      </div>
+    </section>
+
+    <section class="view" id="archive" aria-labelledby="archiveTitle">
+      <div class="section-heading compact archive-heading">
+        <div>
+          <p class="eyebrow">ARCHIVE</p>
+          <h1 id="archiveTitle">残したもの。</h1>
+        </div>
+        <label class="search-box">
+          <span class="sr-only">メモを検索</span>
+          <input id="searchInput" type="search" placeholder="メモ・キーワードを検索">
+        </label>
+      </div>
+      <div class="memo-list" id="memoList"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="メインナビゲーション">
+    <a href="#capture" data-view="capture" class="active"><span>＋</span>残す</a>
+    <a href="#discover" data-view="discover"><span>✦</span>発見</a>
+    <a href="#map" data-view="map"><span>⌘</span>地図</a>
+    <a href="#archive" data-view="archive"><span>≡</span>記録</a>
+  </nav>
+
+  <dialog id="editDialog">
+    <form method="dialog" id="editForm">
+      <div class="dialog-head">
+        <div><p class="eyebrow">EDIT</p><h2>メモを整える</h2></div>
+        <button class="icon-button" value="cancel" aria-label="閉じる">×</button>
+      </div>
+      <label for="editText">メモ</label>
+      <textarea id="editText" rows="5" maxlength="500" required></textarea>
+      <label for="editKeywords">キーワード <small>読点で区切る</small></label>
+      <input id="editKeywords" type="text">
+      <div class="dialog-actions">
+        <button class="quiet-button" value="cancel">キャンセル</button>
+        <button class="primary-button" id="saveEdit" value="default">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="emptyTemplate">
+    <div class="empty-state"><p>まだ十分なメモがありません。</p><span>いくつか残すと、ここに関係が現れます。</span></div>
+  </template>
+
+  <script src="app.js" defer></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {}));
+    }
+  </script>
+</body>
+</html>
