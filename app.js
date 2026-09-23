@@ -67,6 +67,8 @@
   let lastForceSignature = "";
   const LAYOUT_STORAGE = "trace-semantic-layout-v2";
   const graphView = { yaw: -.55, pitch: .28, zoom: 1, dragging: false, moved: false, lastX: 0, lastY: 0, hover: null };
+  let resolveAppReady;
+  const appReady = new Promise(resolve => { resolveAppReady = resolve; });
 
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   const escapeHtml = (value = "") => String(value).replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -785,6 +787,26 @@
     if (await trySync()) await processPendingAnalyses();
   }
 
+  window.TraceApp = {
+    ready: appReady,
+    async exportPackage() {
+      const ready = await appReady;
+      if (!ready || !window.TraceTransfer) throw new Error("メモの保存領域を開けませんでした。");
+      return window.TraceTransfer.createPackage(await getAllRaw(), location.origin);
+    },
+    async importMemos(incoming) {
+      const ready = await appReady;
+      if (!ready || !window.TraceTransfer) throw new Error("メモの保存領域を開けませんでした。");
+      const plan = window.TraceTransfer.planImport(await getAllRaw(), incoming, uid);
+      for (const memo of plan.writes) await putMemo(memo);
+      if (plan.writes.length) {
+        await reload();
+        syncAndAnalyze();
+      }
+      return { ...plan, writes: plan.writes.length };
+    }
+  };
+
   function transferFilename() {
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 13);
     return `trace-transfer-${stamp}.json`;
@@ -960,10 +982,12 @@
     await removeBuiltInSamples();
     await reload();
     setView(location.hash.slice(1) || "capture");
+    resolveAppReady(true);
     await syncAndAnalyze();
     setInterval(syncAndAnalyze, 30000);
   })().catch(error => {
     console.error(error);
+    resolveAppReady(false);
     els.message.textContent = "保存領域を開けませんでした。ブラウザのプライベートモードを解除して再読み込みしてください。";
   });
 })();

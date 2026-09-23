@@ -111,12 +111,6 @@
   function contentFingerprint(memo) {
     return JSON.stringify({
       text: memo.text,
-      keywords: memo.keywords,
-      reactions: memo.reactions,
-      aiStatus: memo.aiStatus,
-      aiTags: memo.aiTags,
-      aiModel: memo.aiModel,
-      aiAnalyzedAt: memo.aiAnalyzedAt,
       photo: memo.photo,
       location: memo.location,
       createdAt: memo.createdAt
