@@ -120,6 +120,13 @@ h1 { margin: 0; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-we
 .map-detail strong { color: var(--ink); }
 
 .search-box input { min-width: 280px; border: 0; border-bottom: 1px solid var(--ink); background: transparent; padding: 10px 2px; outline: 0; }
+.transfer-panel { margin-top: 36px; padding: 24px; border: 1px solid var(--line); background: color-mix(in srgb, var(--white) 72%, transparent); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px 30px; align-items: center; }
+.transfer-panel .eyebrow { margin-bottom: 9px; }
+.transfer-panel h2 { margin: 0; font: 600 21px/1.4 "Yu Mincho", serif; }
+.transfer-panel > div > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.transfer-actions { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; justify-content: flex-end; }
+.import-button { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.transfer-message { grid-column: 1 / -1; min-height: 1.3em; margin: 0; color: var(--accent-2); font-size: 12px; }
 .memo-list { margin-top: 42px; border-top: 2px solid var(--ink); }
 .memo-row { display: grid; grid-template-columns: 128px minmax(0, 1fr) auto; gap: 24px; align-items: start; padding: 26px 0; border-bottom: 1px solid var(--line); }
 .memo-meta { color: var(--muted); font-size: 11px; line-height: 1.7; }
@@ -162,6 +169,9 @@ dialog::backdrop { background: rgba(24,32,29,.54); backdrop-filter: blur(4px); }
   .discover-grid { grid-template-columns: 1fr; }
   .map-heading, .archive-heading { align-items: start; flex-direction: column; }
   .search-box, .search-box input { width: 100%; min-width: 0; }
+  .transfer-panel { grid-template-columns: 1fr; padding: 20px; }
+  .transfer-actions { justify-content: flex-start; }
+  .transfer-message { grid-column: 1; }
   .memo-row { grid-template-columns: 82px 1fr; gap: 14px; }
   .row-actions { grid-column: 2; }
   .capture-note { grid-template-columns: 1fr; gap: 9px; }

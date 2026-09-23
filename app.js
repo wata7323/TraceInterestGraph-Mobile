@@ -45,7 +45,10 @@
     editDialog: document.querySelector("#editDialog"),
     editForm: document.querySelector("#editForm"),
     editText: document.querySelector("#editText"),
-    editKeywords: document.querySelector("#editKeywords")
+    editKeywords: document.querySelector("#editKeywords"),
+    exportMemos: document.querySelector("#exportMemos"),
+    importMemos: document.querySelector("#importMemos"),
+    transferMessage: document.querySelector("#transferMessage")
   };
 
   let db;
@@ -782,6 +785,58 @@
     if (await trySync()) await processPendingAnalyses();
   }
 
+  function transferFilename() {
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 13);
+    return `trace-transfer-${stamp}.json`;
+  }
+
+  async function exportTransferFile() {
+    if (!window.TraceTransfer) throw new Error("移行機能を読み込めませんでした。再読み込みしてください。");
+    const raw = await getAllRaw();
+    const liveCount = raw.filter(memo => !memo.deletedAt).length;
+    if (!liveCount) throw new Error("書き出せるメモがまだありません。");
+    const text = window.TraceTransfer.createPackage(raw, location.origin);
+    const exportedCount = JSON.parse(text).memos.length;
+    if (exportedCount !== liveCount) throw new Error("安全に書き出せないメモが含まれるため、処理を中止しました。");
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = transferFilename();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    els.transferMessage.textContent = `${exportedCount}件を書き出しました。このファイルにはメモと写真が含まれるため、安全に保管してください。`;
+  }
+
+  async function importTransferFile(file) {
+    if (!window.TraceTransfer) throw new Error("移行機能を読み込めませんでした。再読み込みしてください。");
+    if (!file || file.size > 64 * 1024 * 1024) throw new Error("ファイルが大きすぎるか、選択されていません。");
+    const parsed = window.TraceTransfer.parsePackage(await file.text());
+    if (parsed.ignored) throw new Error(`${parsed.ignored}件を安全に読み取れないため、取り込みを中止しました。`);
+    const current = await getAllRaw();
+    const plan = window.TraceTransfer.planImport(current, parsed.memos, uid);
+    if (!plan.writes.length) {
+      els.transferMessage.textContent = `新しいメモはありませんでした。重複${plan.duplicate}件はそのままです。`;
+      return;
+    }
+    const summary = [
+      `新規${plan.added}件`,
+      `競合コピー${plan.conflictCopy}件`,
+      `重複のため変更なし${plan.duplicate}件`
+    ].join("／");
+    const approved = confirm(`${summary}\n\n既存メモは削除・上書きしません。この内容で取り込みますか？`);
+    if (!approved) {
+      els.transferMessage.textContent = "取り込みをキャンセルしました。データは変更していません。";
+      return;
+    }
+    for (const memo of plan.writes) await putMemo(memo);
+    await reload();
+    els.transferMessage.textContent = `${plan.writes.length}件を安全に取り込みました。既存メモは変更していません。`;
+    syncAndAnalyze();
+  }
+
   els.text.addEventListener("input", () => els.charCount.textContent = `${els.text.value.length} / 500`);
   els.photo.addEventListener("change", async () => {
     const file = els.photo.files[0];
@@ -793,6 +848,19 @@
       els.photoPreview.hidden = false;
       els.message.textContent = "写真を追加しました。";
     } catch { els.message.textContent = "写真は追加できませんでした。メモはそのまま保存できます。"; }
+  });
+
+  els.exportMemos.addEventListener("click", async () => {
+    els.transferMessage.textContent = "移行ファイルを準備しています…";
+    try { await exportTransferFile(); }
+    catch (error) { els.transferMessage.textContent = error.message || "書き出しに失敗しました。"; }
+  });
+
+  els.importMemos.addEventListener("change", async () => {
+    els.transferMessage.textContent = "移行ファイルを確認しています…";
+    try { await importTransferFile(els.importMemos.files[0]); }
+    catch (error) { els.transferMessage.textContent = error.message || "取り込みに失敗しました。"; }
+    finally { els.importMemos.value = ""; }
   });
 
   els.form.addEventListener("submit", async event => {

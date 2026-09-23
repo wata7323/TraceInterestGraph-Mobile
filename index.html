@@ -97,6 +97,19 @@
           <input id="searchInput" type="search" placeholder="メモ・キーワードを検索">
         </label>
       </div>
+      <section class="transfer-panel" aria-labelledby="transferTitle">
+        <div>
+          <p class="eyebrow">SAFE TRANSFER</p>
+          <h2 id="transferTitle">スマホとPCのメモを統合</h2>
+          <p>移行ファイルを使い、既存メモを消さずに取り込みます。内容が競合した場合も両方を残します。</p>
+        </div>
+        <div class="transfer-actions">
+          <button class="quiet-button" type="button" id="exportMemos">移行ファイルを書き出す</button>
+          <label class="primary-button import-button" for="importMemos">移行ファイルを取り込む</label>
+          <input id="importMemos" type="file" accept="application/json,.json" hidden>
+        </div>
+        <p class="transfer-message" id="transferMessage" role="status"></p>
+      </section>
       <div class="memo-list" id="memoList"></div>
     </section>
   </main>
@@ -129,6 +142,7 @@
     <div class="empty-state"><p>まだ十分なメモがありません。</p><span>いくつか残すと、ここに関係が現れます。</span></div>
   </template>
 
+  <script src="transfer-core.js" defer></script>
   <script src="app.js" defer></script>
   <script>
     if ("serviceWorker" in navigator) {
