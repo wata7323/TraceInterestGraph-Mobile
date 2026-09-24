@@ -29,32 +29,26 @@
     <section class="view active" id="capture" aria-labelledby="captureTitle">
       <div class="section-heading">
         <p class="eyebrow">CAPTURE</p>
-        <h1 id="captureTitle">まだ言葉になっていないものを、残す。</h1>
-        <p>短くて大丈夫です。整理はあとからTraceが手伝います。</p>
+        <h1 id="captureTitle">思ったことを、そのまま。</h1>
       </div>
 
       <form class="capture-form" id="memoForm">
         <label class="sr-only" for="memoText">メモ</label>
-        <textarea id="memoText" maxlength="500" rows="5" placeholder="この広告、なんか好き。&#10;東京駅で変なのやってた。" required></textarea>
+        <textarea id="memoText" maxlength="500" rows="3" placeholder="今、気になったこと" required></textarea>
         <div class="preview" id="photoPreview" hidden></div>
         <div class="form-row">
           <label class="quiet-button" for="photoInput">＋ 写真</label>
           <input id="photoInput" type="file" accept="image/*" hidden>
           <span class="location-choice">
-            <input id="withLocation" type="checkbox" checked>
-            <label for="withLocation">現在地も残す</label>
+            <input id="withLocation" type="checkbox">
+            <label for="withLocation">位置を追加</label>
           </span>
           <span class="spacer"></span>
           <span class="char-count" id="charCount">0 / 500</span>
-          <button class="primary-button" type="submit">残す</button>
+          <button class="primary-button capture-submit" type="submit">保存</button>
         </div>
         <p class="form-message" id="formMessage" role="status"></p>
       </form>
-
-      <aside class="capture-note">
-        <span>LOCAL FIRST</span>
-        <p>通信がなくても、先にこの端末へ保存します。位置情報が取れなくてもメモは失いません。</p>
-      </aside>
     </section>
 
     <section class="view" id="discover" aria-labelledby="discoverTitle">
@@ -79,11 +73,11 @@
       </div>
       <div class="map-shell">
         <div class="map-toolbar">
-          <div><span class="layout-state idle" id="layoutState">意味配置：準備中</span><span>ドラッグ：回転　ホイール：拡大縮小</span></div>
+          <div><span class="layout-state idle" id="layoutState">意味配置：準備中</span><span>ドラッグで回転</span></div>
           <button type="button" id="resetGraph">視点を戻す</button>
         </div>
         <canvas id="graph" tabindex="0" role="application" aria-label="ドラッグで回転できる3D興味マップ"></canvas>
-        <div class="map-detail" id="mapDetail">3D空間を回転し、ノードを選ぶとつながりの根拠を表示します。</div>
+        <div class="map-detail" id="mapDetail">近いほど、意味が似ています。</div>
       </div>
     </section>
 
@@ -102,7 +96,7 @@
         <div>
           <p class="eyebrow">ONE-TAP SYNC</p>
           <h2 id="cloudSyncTitle">ボタンひとつでPCへ送る</h2>
-          <p>スマホ内で暗号化して一時保管し、PCは自動受信します。PCで整理したAIタグと3Dマップも暗号化してスマホへ戻します。</p>
+          <p>暗号化して同期。PCのAIタグと3Dマップもスマホへ戻ります。</p>
         </div>
         <div class="cloud-setup" id="cloudSetup">
           <button class="primary-button" type="button" id="createCloudSync">このスマホを設定</button>
@@ -125,7 +119,7 @@
         <div>
           <p class="eyebrow">SAFE TRANSFER</p>
           <h2 id="transferTitle">スマホとPCのメモを統合</h2>
-          <p>移行ファイルを使い、既存メモを消さずに取り込みます。内容が競合した場合も両方を残します。</p>
+          <p>既存メモを消さずに統合します。</p>
         </div>
         <div class="transfer-actions">
           <button class="quiet-button" type="button" id="exportMemos">移行ファイルを書き出す</button>

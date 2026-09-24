@@ -1,4 +1,4 @@
-const CACHE_NAME = "trace-shell-v4";
+const CACHE_NAME = "trace-shell-v5";
 const APP_SHELL = ["./", "./index.html", "./styles.css", "./transfer-core.js", "./app.js", "./cloud-config.js", "./cloud-sync.js", "./manifest.webmanifest", "./trace-icon.svg"];
 
 self.addEventListener("install", event => {

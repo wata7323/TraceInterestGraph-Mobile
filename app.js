@@ -605,17 +605,6 @@
       return;
     }
 
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    ctx.strokeStyle = "rgba(226,235,230,.09)";
-    ctx.lineWidth = 1;
-    [1, .68, .36].forEach(scale => {
-      ctx.beginPath();
-      ctx.ellipse(0, 0, Math.min(width, height) * .34 * graphView.zoom * scale, Math.min(width, height) * .13 * graphView.zoom * scale, graphView.pitch, 0, Math.PI * 2);
-      ctx.stroke();
-    });
-    ctx.restore();
-
     const base = Math.min(width, height) * .265 * graphView.zoom;
     const camera = 4.2;
     const projected = graphModel.nodes.map(node => {
@@ -747,7 +736,7 @@
     bindGraphEvents();
     if (graphFrame) cancelAnimationFrame(graphFrame);
     graphFrame = requestAnimationFrame(animate3DGraph);
-    els.mapDetail.textContent = memos.length ? "近いノードほど意味・概念・反応が似ています。選ぶとつながりの根拠を表示します。" : "最初のメモを残すと、ここに3Dマップが育ちます。";
+    els.mapDetail.textContent = memos.length ? "近いほど、意味・概念・反応が似ています。選択で根拠を表示。" : "メモが増えると3Dマップになります。";
     requestSemanticLinks();
   }
 
@@ -976,13 +965,14 @@
     const now = new Date().toISOString();
     const memo = { id: uid(), text, keywords: extractKeywords(text), reactions: extractReactions(text), aiStatus: "pending", aiTags: null, photo: photoData, location: null, createdAt: now, updatedAt: now, deletedAt: null };
     await putMemo(memo);
-    await reload();
     els.text.value = "";
     els.photo.value = "";
     photoData = null;
     els.photoPreview.hidden = true;
     els.charCount.textContent = "0 / 500";
-    els.message.textContent = "この端末に保存しました。";
+    els.message.textContent = "保存しました。";
+    els.text.focus({ preventScroll: true });
+    await reload();
     if (els.withLocation.checked) {
       getLocation().then(async locationData => {
         if (!locationData) return;
@@ -996,10 +986,17 @@
       });
     }
     if (await trySync()) {
-      els.message.textContent = "この端末とPCに保存しました。AIがタグを整理しています…";
+      els.message.textContent = "保存・同期しました。";
       analyzeMemo(memo);
     } else {
-      els.message.textContent = "スマホに保存しました。PC版につながったときにAI整理できます。";
+      els.message.textContent = "保存しました。AI整理はPC接続時に行います。";
+    }
+  });
+
+  els.text.addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      els.form.requestSubmit();
     }
   });
 
