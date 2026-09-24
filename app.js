@@ -642,16 +642,16 @@
         const depth = (edge.a.depth + edge.b.depth) / 2;
         const focused = !focusId || edge.from === focusId || edge.to === focusId;
         const baseAlpha = edge.type === "semantic"
-          ? Math.min(.84, .22 + (edge.score || 0) * .7)
-          : edge.type === "hypothesis" ? .48 : .16;
+          ? Math.min(.96, .52 + (edge.score || 0) * .42)
+          : edge.type === "hypothesis" ? .78 : .4;
         ctx.beginPath();
         ctx.moveTo(edge.a.sx, edge.a.sy);
         ctx.lineTo(edge.b.sx, edge.b.sy);
         ctx.setLineDash(edge.type === "hypothesis" ? [4, 7] : []);
-        const alpha = baseAlpha * Math.max(.55, Math.min(1, .78 + depth * .15)) * (focused ? 1 : .055);
+        const alpha = baseAlpha * Math.max(.72, Math.min(1, .86 + depth * .1)) * (focused ? 1 : .38);
         const color = edge.type === "hypothesis" ? "226,75,48" : "116,186,168";
         ctx.strokeStyle = `rgba(${color},${alpha})`;
-        ctx.lineWidth = edge.type === "semantic" ? .7 + (edge.score || 0) * 2.5 : edge.type === "hypothesis" ? 1.15 : .7;
+        ctx.lineWidth = edge.type === "semantic" ? 1.7 + (edge.score || 0) * 2.5 : edge.type === "hypothesis" ? 1.6 : 1.15;
         ctx.stroke();
       });
     ctx.setLineDash([]);
