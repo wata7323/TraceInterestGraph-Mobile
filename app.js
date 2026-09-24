@@ -66,6 +66,7 @@
   let layoutRequestToken = 0;
   let lastForceSignature = "";
   const LAYOUT_STORAGE = "trace-semantic-layout-v2";
+  const CLOUD_MAP_STORAGE = "trace-semantic-cloud-map-v1";
   const graphView = { yaw: -.55, pitch: .28, zoom: 1, dragging: false, moved: false, lastX: 0, lastY: 0, hover: null };
   let resolveAppReady;
   const appReady = new Promise(resolve => { resolveAppReady = resolve; });
@@ -312,7 +313,7 @@
         <div class="tags">${(memo.keywords || []).map(x => `<span class="tag">${escapeHtml(x)}</span>`).join("")}${(memo.reactions || []).map(x => `<span class="tag reaction">${escapeHtml(x)}</span>`).join("")}</div>
         ${memo.photo ? `<img class="memo-photo" src="${memo.photo}" alt="メモに添付した写真">` : ""}
       </div>
-      <div class="row-actions">${memo.aiStatus === "failed" ? `<button class="text-button" data-analyze="${memo.id}">AI再試行</button>` : ""}<button class="text-button" data-edit="${memo.id}">編集</button><button class="text-button danger" data-delete="${memo.id}">削除</button></div>
+      <div class="row-actions">${memo.aiStatus === "failed" ? `<button class="text-button" data-analyze="${escapeHtml(memo.id)}">AI再試行</button>` : ""}<button class="text-button" data-edit="${escapeHtml(memo.id)}">編集</button><button class="text-button danger" data-delete="${escapeHtml(memo.id)}">削除</button></div>
     </article>`).join("");
   }
 
@@ -434,12 +435,54 @@
   function layoutInputSignature(shownMemos) {
     return shownMemos.map(memo => JSON.stringify([
       memo.id,
-      memo.text,
+      clean(memo.text),
       memo.keywords || [],
       memo.reactions || [],
       (memo.aiTags && memo.aiTags.concept_tags) || [],
       (memo.aiTags && memo.aiTags.broad_tags) || []
     ])).join("|");
+  }
+
+  function sanitizeCloudMap(value) {
+    if (!value || value.version !== 1 || typeof value.signature !== "string" || value.signature.length > 500000) return null;
+    if (!Array.isArray(value.links) || value.links.length > 300 || !value.positions || typeof value.positions !== "object" || Array.isArray(value.positions)) return null;
+    const links = [];
+    for (const link of value.links) {
+      if (!link || typeof link.source !== "string" || typeof link.target !== "string" || link.source.length > 120 || link.target.length > 120) return null;
+      const score = Number(link.score);
+      if (!Number.isFinite(score) || score < 0 || score > 1) return null;
+      links.push({ source: link.source, target: link.target, score });
+    }
+    const positions = Object.create(null);
+    const entries = Object.entries(value.positions);
+    if (entries.length > 1000) return null;
+    for (const [id, point] of entries) {
+      if (!id || id.length > 180 || !point || ![point.x, point.y, point.z].every(number => Number.isFinite(number) && Math.abs(number) <= 1000)) return null;
+      positions[id] = { x: Number(point.x), y: Number(point.y), z: Number(point.z) };
+    }
+    return { version: 1, signature: value.signature, links, positions };
+  }
+
+  function readCloudMap(signature) {
+    try {
+      const map = sanitizeCloudMap(JSON.parse(localStorage.getItem(CLOUD_MAP_STORAGE) || "null"));
+      return map && map.signature === signature ? map : null;
+    } catch { return null; }
+  }
+
+  function installCloudMap(value) {
+    const map = sanitizeCloudMap(value);
+    const signature = layoutInputSignature(memos.slice(0, 18));
+    if (!map || map.signature !== signature) return false;
+    semanticLinks = map.links;
+    semanticSignature = signature;
+    localStorage.setItem(CLOUD_MAP_STORAGE, JSON.stringify(map));
+    localStorage.setItem(LAYOUT_STORAGE, JSON.stringify(map.positions));
+    setLayoutState("ready", "意味配置：PC分析を同期");
+    lastForceSignature = `${signature}:ready:${semanticLinks.map(link => `${link.source}-${link.target}-${link.score}`).join("|")}`;
+    build3DGraph();
+    if (location.hash === "#map") draw3DGraph();
+    return true;
   }
 
   function setLayoutState(state, label) {
@@ -460,6 +503,11 @@
       return;
     }
     if (!serverConnected) {
+      const synced = readCloudMap(signature);
+      if (synced) {
+        installCloudMap(synced);
+        return;
+      }
       semanticLinks = [];
       semanticSignature = signature;
       setLayoutState("fallback", "意味配置：端末内タグのみ");
@@ -787,12 +835,34 @@
     if (await trySync()) await processPendingAnalyses();
   }
 
+  function cloudMapSnapshot() {
+    return sanitizeCloudMap({
+      version: 1,
+      signature: layoutInputSignature(memos.slice(0, 18)),
+      links: semanticLinks,
+      positions: readLayoutPositions()
+    });
+  }
+
   window.TraceApp = {
     ready: appReady,
     async exportPackage() {
       const ready = await appReady;
       if (!ready || !window.TraceTransfer) throw new Error("メモの保存領域を開けませんでした。");
       return window.TraceTransfer.createPackage(await getAllRaw(), location.origin);
+    },
+    async exportCloudBundle() {
+      const ready = await appReady;
+      if (!ready || !window.TraceTransfer) throw new Error("メモの保存領域を開けませんでした。");
+      await syncAndAnalyze();
+      await requestSemanticLinks();
+      build3DGraph();
+      const packageText = window.TraceTransfer.createPackage(await getAllRaw(), location.origin);
+      const packageData = JSON.parse(packageText);
+      const map = cloudMapSnapshot();
+      if (!map) throw new Error("3Dマップを安全に書き出せませんでした。");
+      const revision = `crc32:${window.TraceTransfer.crc32(JSON.stringify({ memos: packageData.memos, map }))}`;
+      return JSON.stringify({ format: "trace-interest-graph-cloud", version: 1, revision, packageText, map });
     },
     async importMemos(incoming) {
       const ready = await appReady;
@@ -804,6 +874,20 @@
         syncAndAnalyze();
       }
       return { ...plan, writes: plan.writes.length };
+    },
+    async importCloudBundle(text) {
+      const ready = await appReady;
+      if (!ready || !window.TraceTransfer || typeof text !== "string" || text.length > 64 * 1024 * 1024) throw new Error("PCからの同期データを読み取れませんでした。");
+      let bundle;
+      try { bundle = JSON.parse(text); } catch { throw new Error("PCからの同期データを読み取れませんでした。"); }
+      if (!bundle || bundle.format !== "trace-interest-graph-cloud" || bundle.version !== 1 || typeof bundle.packageText !== "string") throw new Error("PCからの同期データ形式が不正です。");
+      const parsed = window.TraceTransfer.parsePackage(bundle.packageText);
+      if (parsed.ignored) throw new Error("安全に読み取れないメモがあるため、PCからの受信を中止しました。");
+      const plan = window.TraceTransfer.planImport(await getAllRaw(), parsed.memos, uid, new Date().toISOString(), { mergeAnalysis: true });
+      for (const memo of [...plan.writes, ...plan.updates]) await putMemo(memo);
+      if (plan.writes.length || plan.updates.length) await reload();
+      const mapInstalled = installCloudMap(bundle.map);
+      return { ...plan, writes: plan.writes.length, updates: plan.updates.length, mapInstalled, revision: String(bundle.revision || "") };
     }
   };
 
@@ -990,4 +1074,7 @@
     resolveAppReady(false);
     els.message.textContent = "保存領域を開けませんでした。ブラウザのプライベートモードを解除して再読み込みしてください。";
   });
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {}));
+  }
 })();

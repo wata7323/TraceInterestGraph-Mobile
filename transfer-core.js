@@ -11,6 +11,7 @@
   const MAX_MEMOS = 5000;
   const MAX_PHOTO_LENGTH = 12 * 1024 * 1024;
   const TAG_KEYS = ["surface_tags", "canonical_tags", "concept_tags", "broad_tags", "reaction_tags"];
+  const SAFE_PHOTO = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/i;
 
   function clean(value, limit) {
     return String(value || "").trim().replace(/\s+/g, " ").slice(0, limit);
@@ -50,7 +51,7 @@
     const updatedAt = validDate(value.updatedAt) || createdAt;
     if (!id || !text || !createdAt || !updatedAt) return null;
     const hasPhoto = value.photo !== null && value.photo !== undefined && value.photo !== "";
-    const photoIsSafe = typeof value.photo === "string" && value.photo.length <= MAX_PHOTO_LENGTH && /^data:image\/(?:jpeg|png|webp);base64,/i.test(value.photo);
+    const photoIsSafe = typeof value.photo === "string" && value.photo.length <= MAX_PHOTO_LENGTH && SAFE_PHOTO.test(value.photo);
     if (hasPhoto && !photoIsSafe) return null;
     const location = cleanLocation(value.location);
     if (value.location !== null && value.location !== undefined && !location) return null;
@@ -117,9 +118,16 @@
     });
   }
 
-  function planImport(existing, incoming, makeId, now = new Date().toISOString()) {
+  function hasNewerAnalysis(oldMemo, incomingMemo) {
+    if (incomingMemo.aiStatus !== "completed" || !incomingMemo.aiAnalyzedAt || !incomingMemo.aiTags) return false;
+    if (oldMemo.aiStatus !== "completed" || !oldMemo.aiAnalyzedAt) return true;
+    return Date.parse(incomingMemo.aiAnalyzedAt) > Date.parse(oldMemo.aiAnalyzedAt);
+  }
+
+  function planImport(existing, incoming, makeId, now = new Date().toISOString(), options = {}) {
     const current = new Map((Array.isArray(existing) ? existing : []).filter(item => item && typeof item.id === "string").map(item => [item.id, item]));
     const writes = [];
+    const updates = [];
     let added = 0;
     let duplicate = 0;
     let conflictCopy = 0;
@@ -135,6 +143,21 @@
       }
       const safeOld = sanitizeMemo(old);
       if (safeOld && contentFingerprint(safeOld) === contentFingerprint(memo)) {
+        if (options.mergeAnalysis && hasNewerAnalysis(safeOld, memo)) {
+          const enriched = {
+            ...old,
+            keywords: memo.keywords,
+            reactions: memo.reactions,
+            aiStatus: memo.aiStatus,
+            aiTags: memo.aiTags,
+            aiModel: memo.aiModel,
+            aiAnalyzedAt: memo.aiAnalyzedAt,
+            aiError: null,
+            updatedAt: memo.updatedAt
+          };
+          updates.push(enriched);
+          current.set(enriched.id, enriched);
+        }
         duplicate += 1;
         continue;
       }
@@ -144,7 +167,7 @@
       current.set(copied.id, copied);
       conflictCopy += 1;
     }
-    return { writes, added, duplicate, conflictCopy };
+    return { writes, updates, added, duplicate, conflictCopy };
   }
 
   return { FORMAT, VERSION, createPackage, parsePackage, planImport, sanitizeMemo, crc32 };

@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Trace — Interest Graph Demo</title>
   <meta name="description" content="雑なメモから、自分の興味のつながりを見つけるローカルデモ。">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://trace-interest-sync.kazutanagai02.workers.dev; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="trace-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="trace-icon.svg">
@@ -101,7 +102,7 @@
         <div>
           <p class="eyebrow">ONE-TAP SYNC</p>
           <h2 id="cloudSyncTitle">ボタンひとつでPCへ送る</h2>
-          <p>スマホ内で暗号化して一時保管し、PCは起動時に自動受信します。最初だけ接続コードの設定が必要です。</p>
+          <p>スマホ内で暗号化して一時保管し、PCは自動受信します。PCで整理したAIタグと3Dマップも暗号化してスマホへ戻します。</p>
         </div>
         <div class="cloud-setup" id="cloudSetup">
           <button class="primary-button" type="button" id="createCloudSync">このスマホを設定</button>
@@ -169,10 +170,5 @@
   <script src="app.js" defer></script>
   <script src="cloud-config.js" defer></script>
   <script src="cloud-sync.js" defer></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {}));
-    }
-  </script>
 </body>
 </html>
