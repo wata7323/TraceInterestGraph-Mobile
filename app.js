@@ -67,7 +67,7 @@
   let lastForceSignature = "";
   const LAYOUT_STORAGE = "trace-semantic-layout-v2";
   const CLOUD_MAP_STORAGE = "trace-semantic-cloud-map-v1";
-  const graphView = { yaw: -.55, pitch: .28, zoom: 1, dragging: false, moved: false, lastX: 0, lastY: 0, hover: null };
+  const graphView = { yaw: -.55, pitch: .28, zoom: 1, dragging: false, moved: false, lastX: 0, lastY: 0, hover: null, selected: null };
   let resolveAppReady;
   const appReady = new Promise(resolve => { resolveAppReady = resolve; });
 
@@ -559,11 +559,29 @@
     shownMemos.forEach(memo => (memo.keywords || []).filter(keyword => keywordNames.includes(keyword)).slice(0, 5).forEach(keyword => {
       if (byId.has(memo.id) && byId.has(`k-${keyword}`)) edges.push({ from: memo.id, to: `k-${keyword}`, type: "evidence" });
     }));
+    const drawnPairs = new Set();
+    const pairKey = (a, b) => [a, b].sort().join("|");
+    const memoLinks = semanticLinks
+      .filter(link => link.score >= .34 && byId.has(link.source) && byId.has(link.target))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12);
+    memoLinks.forEach(link => {
+      const key = pairKey(link.source, link.target);
+      drawnPairs.add(key);
+      edges.push({ from: link.source, to: link.target, type: "semantic", score: link.score });
+    });
     connections()
       .filter(c => c.serendipity >= .19 && c.bridge.length && byId.has(c.a.id) && byId.has(c.b.id))
       .sort((a, b) => b.serendipity - a.serendipity)
-      .slice(0, 7)
-      .forEach(c => edges.push({ from: c.a.id, to: c.b.id, type: "hypothesis" }));
+      .filter(c => !drawnPairs.has(pairKey(c.a.id, c.b.id)))
+      .slice(0, 5)
+      .forEach(c => edges.push({ from: c.a.id, to: c.b.id, type: "hypothesis", score: c.serendipity }));
+    const degree = new Map(nodes.map(node => [node.id, 0]));
+    edges.forEach(edge => {
+      degree.set(edge.from, (degree.get(edge.from) || 0) + 1);
+      degree.set(edge.to, (degree.get(edge.to) || 0) + 1);
+    });
+    nodes.forEach(node => { node.degree = degree.get(node.id) || 0; });
     const forceSignature = `${layoutInputSignature(shownMemos)}:${semanticState}:${semanticLinks.map(link => `${link.source}-${link.target}-${link.score}`).join("|")}`;
     applyLogicalLayout(nodes, edges, forceSignature);
     graphModel = { nodes, edges, projected: [], byId };
@@ -614,48 +632,70 @@
     });
     const projectedById = new Map(projected.map(node => [node.id, node]));
 
+    const focusId = graphView.hover || graphView.selected;
+    const focusNodes = new Set(focusId ? [focusId, ...graphModel.edges.filter(edge => edge.from === focusId || edge.to === focusId).map(edge => edge.from === focusId ? edge.to : edge.from)] : []);
     graphModel.edges
       .map(edge => ({ ...edge, a: projectedById.get(edge.from), b: projectedById.get(edge.to) }))
       .filter(edge => edge.a && edge.b)
       .sort((a, b) => (a.a.depth + a.b.depth) - (b.a.depth + b.b.depth))
       .forEach(edge => {
         const depth = (edge.a.depth + edge.b.depth) / 2;
+        const focused = !focusId || edge.from === focusId || edge.to === focusId;
+        const baseAlpha = edge.type === "semantic"
+          ? Math.min(.84, .22 + (edge.score || 0) * .7)
+          : edge.type === "hypothesis" ? .48 : .16;
         ctx.beginPath();
         ctx.moveTo(edge.a.sx, edge.a.sy);
         ctx.lineTo(edge.b.sx, edge.b.sy);
         ctx.setLineDash(edge.type === "hypothesis" ? [4, 7] : []);
-        ctx.strokeStyle = edge.type === "hypothesis" ? `rgba(226,75,48,${Math.max(.18, .44 + depth * .1)})` : `rgba(94,180,158,${Math.max(.13, .32 + depth * .09)})`;
-        ctx.lineWidth = Math.max(.65, 1.1 + depth * .12);
+        const alpha = baseAlpha * Math.max(.55, Math.min(1, .78 + depth * .15)) * (focused ? 1 : .055);
+        const color = edge.type === "hypothesis" ? "226,75,48" : "116,186,168";
+        ctx.strokeStyle = `rgba(${color},${alpha})`;
+        ctx.lineWidth = edge.type === "semantic" ? .7 + (edge.score || 0) * 2.5 : edge.type === "hypothesis" ? 1.15 : .7;
         ctx.stroke();
       });
     ctx.setLineDash([]);
 
     projected.sort((a, b) => a.depth - b.depth).forEach(node => {
       const hovered = graphView.hover === node.id;
-      const radius = Math.max(5, (node.type === "memo" ? 10 : 7.5) * node.perspective * (hovered ? 1.35 : 1));
-      const alpha = Math.max(.42, Math.min(1, .68 + node.depth * .14));
+      const selected = graphView.selected === node.id;
+      const related = !focusId || focusNodes.has(node.id);
+      const radius = Math.max(4.5, (node.type === "memo" ? 7.5 + Math.min(5, node.degree * .8) : 5.6 + Math.min(2, node.degree * .3)) * node.perspective * ((hovered || selected) ? 1.3 : 1));
+      const alpha = Math.max(.22, Math.min(1, .72 + node.depth * .13)) * (related ? 1 : .15);
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.shadowBlur = hovered ? 24 : 12;
+      ctx.shadowBlur = hovered || selected ? 22 : node.type === "memo" && node.degree >= 3 ? 9 : 0;
       ctx.shadowColor = node.type === "memo" ? "rgba(226,75,48,.72)" : "rgba(94,180,158,.58)";
       ctx.beginPath();
-      ctx.arc(node.sx, node.sy, radius, 0, Math.PI * 2);
-      ctx.fillStyle = node.type === "memo" ? (hovered ? "#ff6c4f" : "#e24b30") : (hovered ? "#a6e4d4" : "#74baa8");
+      if (node.type === "memo") {
+        ctx.arc(node.sx, node.sy, radius, 0, Math.PI * 2);
+      } else {
+        ctx.moveTo(node.sx, node.sy - radius);
+        ctx.lineTo(node.sx + radius, node.sy);
+        ctx.lineTo(node.sx, node.sy + radius);
+        ctx.lineTo(node.sx - radius, node.sy);
+        ctx.closePath();
+      }
+      ctx.fillStyle = node.type === "memo" ? (selected || hovered ? "#ff805f" : "#e24b30") : (selected || hovered ? "#c3f1e4" : "#74baa8");
       ctx.fill();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(255,255,255,.74)";
-      ctx.stroke();
+      if (selected || hovered) {
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "rgba(255,255,255,.92)";
+        ctx.stroke();
+      }
       ctx.restore();
 
-      if (node.depth > -.38 || hovered) {
-        ctx.font = `${hovered ? 600 : 400} ${node.type === "memo" ? 10 : 11}px "Yu Gothic UI", sans-serif`;
+      const showLabel = selected || hovered || (related && ((!focusId && (node.depth > .3 || node.degree >= 3)) || (focusId && focusNodes.has(node.id))));
+      if (showLabel) {
+        ctx.font = `${selected || hovered ? 600 : 400} ${node.type === "memo" ? 10 : 11}px "Yu Gothic UI", sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        const textWidth = ctx.measureText(node.label).width;
-        ctx.fillStyle = "rgba(13,18,16,.78)";
-        ctx.fillRect(node.sx - textWidth / 2 - 4, node.sy + radius + 5, textWidth + 8, 17);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(13,18,16,.88)";
+        ctx.lineJoin = "round";
+        ctx.strokeText(node.label, node.sx, node.sy + radius + 6);
         ctx.fillStyle = "#edf2ef";
-        ctx.fillText(node.label, node.sx, node.sy + radius + 8);
+        ctx.fillText(node.label, node.sx, node.sy + radius + 6);
       }
       node.hitRadius = Math.max(14, radius + 5);
     });
@@ -694,7 +734,11 @@
     });
     els.graph.addEventListener("pointerup", event => {
       const hit = nodeAt(event.clientX, event.clientY);
-      if (!graphView.moved && hit) showNodeDetail(hit);
+      if (!graphView.moved) {
+        graphView.selected = hit?.id || null;
+        if (hit) showNodeDetail(hit);
+        else els.mapDetail.textContent = memos.length ? "近いほど、意味・概念・反応が似ています。選択で根拠を表示。" : "メモが増えると3Dマップになります。";
+      }
       graphView.dragging = false;
       els.graph.releasePointerCapture(event.pointerId);
     });
@@ -715,7 +759,7 @@
       event.preventDefault();
     });
     document.querySelector("#resetGraph").addEventListener("click", () => {
-      Object.assign(graphView, { yaw: -.55, pitch: .28, zoom: 1, hover: null });
+      Object.assign(graphView, { yaw: -.55, pitch: .28, zoom: 1, hover: null, selected: null });
       draw3DGraph();
     });
     window.addEventListener("resize", () => { if (document.querySelector("#map").classList.contains("active")) draw3DGraph(); });

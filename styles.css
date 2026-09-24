@@ -99,6 +99,9 @@ h1 { margin: 0; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-we
 .legend { display: flex; gap: 22px; color: var(--muted); font-size: 11px; }
 .legend span { display: flex; align-items: center; gap: 8px; }
 .legend i { display: inline-block; width: 30px; height: 1px; background: var(--accent-2); }
+.legend .memo-mark, .legend .tag-mark { width: 8px; height: 8px; background: var(--accent-2); }
+.legend .memo-mark { border-radius: 50%; }
+.legend .tag-mark { transform: rotate(45deg); background: var(--accent); }
 .legend .dashed-line { background: repeating-linear-gradient(90deg, var(--accent) 0 4px, transparent 4px 8px); }
 .map-shell { margin-top: 42px; background: #111815; border: 1px solid var(--ink); position: relative; overflow: hidden; }
 .map-toolbar { min-height: 43px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #aeb8b3; border-bottom: 1px solid rgba(255,255,255,.13); font-size: 10px; letter-spacing: .04em; }
