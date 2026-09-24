@@ -609,13 +609,13 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
     const glow = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * .62);
-    glow.addColorStop(0, "#1c2924");
-    glow.addColorStop(1, "#0d1210");
+    glow.addColorStop(0, "#14243a");
+    glow.addColorStop(1, "#070e1b");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, width, height);
 
     if (!graphModel.nodes.length) {
-      ctx.fillStyle = "#dce3df";
+      ctx.fillStyle = "#eef7ff";
       ctx.textAlign = "center";
       ctx.font = '18px "Yu Mincho", serif';
       ctx.fillText("メモを残すと、ここに3Dマップが育ちます。", width / 2, height / 2);
@@ -642,14 +642,14 @@
         const depth = (edge.a.depth + edge.b.depth) / 2;
         const focused = !focusId || edge.from === focusId || edge.to === focusId;
         const baseAlpha = edge.type === "semantic"
-          ? Math.min(.96, .52 + (edge.score || 0) * .42)
-          : edge.type === "hypothesis" ? .78 : .4;
+          ? Math.min(.98, .62 + (edge.score || 0) * .34)
+          : edge.type === "hypothesis" ? .88 : .72;
         ctx.beginPath();
         ctx.moveTo(edge.a.sx, edge.a.sy);
         ctx.lineTo(edge.b.sx, edge.b.sy);
         ctx.setLineDash(edge.type === "hypothesis" ? [4, 7] : []);
-        const alpha = baseAlpha * Math.max(.72, Math.min(1, .86 + depth * .1)) * (focused ? 1 : .38);
-        const color = edge.type === "hypothesis" ? "226,75,48" : "116,186,168";
+        const alpha = baseAlpha * Math.max(.8, Math.min(1, .9 + depth * .08)) * (focused ? 1 : .55);
+        const color = edge.type === "semantic" ? "122,213,255" : edge.type === "hypothesis" ? "255,190,116" : "151,177,207";
         ctx.strokeStyle = `rgba(${color},${alpha})`;
         ctx.lineWidth = edge.type === "semantic" ? 1.7 + (edge.score || 0) * 2.5 : edge.type === "hypothesis" ? 1.6 : 1.15;
         ctx.stroke();
@@ -661,11 +661,11 @@
       const selected = graphView.selected === node.id;
       const related = !focusId || focusNodes.has(node.id);
       const radius = Math.max(4.5, (node.type === "memo" ? 7.5 + Math.min(5, node.degree * .8) : 5.6 + Math.min(2, node.degree * .3)) * node.perspective * ((hovered || selected) ? 1.3 : 1));
-      const alpha = Math.max(.22, Math.min(1, .72 + node.depth * .13)) * (related ? 1 : .15);
+      const alpha = Math.max(.44, Math.min(1, .84 + node.depth * .1)) * (related ? 1 : .45);
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.shadowBlur = hovered || selected ? 22 : node.type === "memo" && node.degree >= 3 ? 9 : 0;
-      ctx.shadowColor = node.type === "memo" ? "rgba(226,75,48,.72)" : "rgba(94,180,158,.58)";
+      ctx.shadowColor = node.type === "memo" ? "rgba(255,190,117,.8)" : "rgba(126,222,248,.75)";
       ctx.beginPath();
       if (node.type === "memo") {
         ctx.arc(node.sx, node.sy, radius, 0, Math.PI * 2);
@@ -676,25 +676,25 @@
         ctx.lineTo(node.sx - radius, node.sy);
         ctx.closePath();
       }
-      ctx.fillStyle = node.type === "memo" ? (selected || hovered ? "#ff805f" : "#e24b30") : (selected || hovered ? "#c3f1e4" : "#74baa8");
+      ctx.fillStyle = node.type === "memo" ? (selected || hovered ? "#ffe3b6" : "#ffc477") : (selected || hovered ? "#d1f5ff" : "#82dff5");
       ctx.fill();
       if (selected || hovered) {
         ctx.lineWidth = 1.5;
-        ctx.strokeStyle = "rgba(255,255,255,.92)";
+        ctx.strokeStyle = "rgba(255,255,255,.96)";
         ctx.stroke();
       }
       ctx.restore();
 
       const showLabel = selected || hovered || (related && ((!focusId && (node.depth > .3 || node.degree >= 3)) || (focusId && focusNodes.has(node.id))));
       if (showLabel) {
-        ctx.font = `${selected || hovered ? 600 : 400} ${node.type === "memo" ? 10 : 11}px "Yu Gothic UI", sans-serif`;
+        ctx.font = `${selected || hovered ? 600 : 400} 12px "Yu Gothic UI", sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.lineWidth = 3;
-        ctx.strokeStyle = "rgba(13,18,16,.88)";
+        ctx.strokeStyle = "rgba(6,17,30,.94)";
         ctx.lineJoin = "round";
         ctx.strokeText(node.label, node.sx, node.sy + radius + 6);
-        ctx.fillStyle = "#edf2ef";
+        ctx.fillStyle = "#f4faff";
         ctx.fillText(node.label, node.sx, node.sy + radius + 6);
       }
       node.hitRadius = Math.max(14, radius + 5);

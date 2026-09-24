@@ -98,24 +98,24 @@ h1 { margin: 0; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-we
 .map-heading, .archive-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
 .legend { display: flex; gap: 22px; color: var(--muted); font-size: 11px; }
 .legend span { display: flex; align-items: center; gap: 8px; }
-.legend i { display: inline-block; width: 30px; height: 1px; background: var(--accent-2); }
-.legend .memo-mark, .legend .tag-mark { width: 8px; height: 8px; background: var(--accent-2); }
+.legend i { display: inline-block; width: 30px; height: 1px; background: #7ad5ff; }
+.legend .memo-mark, .legend .tag-mark { width: 8px; height: 8px; background: #ffc477; }
 .legend .memo-mark { border-radius: 50%; }
-.legend .tag-mark { transform: rotate(45deg); background: var(--accent); }
-.legend .dashed-line { background: repeating-linear-gradient(90deg, var(--accent) 0 4px, transparent 4px 8px); }
-.map-shell { margin-top: 42px; background: #111815; border: 1px solid var(--ink); position: relative; overflow: hidden; }
-.map-toolbar { min-height: 43px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #aeb8b3; border-bottom: 1px solid rgba(255,255,255,.13); font-size: 10px; letter-spacing: .04em; }
+.legend .tag-mark { transform: rotate(45deg); background: #82dff5; }
+.legend .dashed-line { background: repeating-linear-gradient(90deg, #ffbe74 0 4px, transparent 4px 8px); }
+.map-shell { margin-top: 42px; background: #070e1b; border: 1px solid #1d334b; position: relative; overflow: hidden; }
+.map-toolbar { min-height: 43px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #c3d5e5; border-bottom: 1px solid rgba(255,255,255,.16); font-size: 10px; letter-spacing: .04em; }
 .map-toolbar > div { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.layout-state { color: #c7d0cc; }
+.layout-state { color: #dde8f2; }
 .layout-state::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #7d8883; }
 .layout-state.loading::before { background: #d2a547; box-shadow: 0 0 0 3px rgba(210,165,71,.14); }
-.layout-state.ready::before { background: #74baa8; box-shadow: 0 0 0 3px rgba(116,186,168,.14); }
-.layout-state.fallback::before { background: #e24b30; }
-.map-toolbar button { border: 0; border-bottom: 1px solid #66716c; padding: 4px 0; color: #d9dedb; background: transparent; cursor: pointer; font-size: 10px; }
+.layout-state.ready::before { background: #82dff5; box-shadow: 0 0 0 3px rgba(130,223,245,.18); }
+.layout-state.fallback::before { background: #ffbe74; }
+.map-toolbar button { border: 0; border-bottom: 1px solid #7b98b0; padding: 4px 0; color: #f0f7ff; background: transparent; cursor: pointer; font-size: 10px; }
 .map-toolbar button:hover { color: #fff; border-color: #fff; }
 #graph { width: 100%; height: min(62vh, 590px); min-height: 480px; display: block; cursor: grab; touch-action: none; outline: none; }
 #graph:active { cursor: grabbing; }
-#graph:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+#graph:focus-visible { box-shadow: inset 0 0 0 2px #8de5ff; }
 .map-detail { min-height: 72px; padding: 20px 26px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.65; }
 .map-detail { background: var(--white); }
 .map-detail strong { color: var(--ink); }
