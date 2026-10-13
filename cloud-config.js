@@ -1,1 +1,2 @@
-window.TRACE_CLOUD_SYNC_URL = "https://trace-interest-sync.kazutanagai02.workers.dev";
+// 同期先は未設定
+window.TRACE_CLOUD_SYNC_URL = "";
